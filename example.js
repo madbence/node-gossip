@@ -1,17 +1,19 @@
 'use strict';
 
 var Node = require('./');
+var Remote = require('./remote');
 var co = require('co');
 
 var n = new Node();
-
+var m = new Node();
+var r = new Remote();
+r.node = m;
+n._peers.push(r);
 
 co(function*() {
-  yield* n.state.set('foo', { value: 1, version: 1 }, 1);
-  yield* n.state.set('foo', { value: 1, version: 2 }, 2);
-  var digest = yield* n.digest();
-  console.log(digest);
-  yield* n.state.set('foo', { value: 1, version: 3 }, 2);
-  var delta = yield* n.delta(digest);
-  console.log(delta);
+  yield* n.state.set('foo', { value: 1, version: 1 }, 0);
+  yield* n.state.set('foo', { value: 1, version: 2 }, 1);
+  m.state.participants[0] = {};
+  m.state.participants[1] = {};
+  yield* n.gossip();
 })();

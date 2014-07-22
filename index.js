@@ -9,6 +9,7 @@ function Node() {
   this.id = i++;
   this._peers = [];
   this.state = new State(this.id);
+  this.performGossip = pushPullGossip;
 }
 
 Node.prototype.choosePeer = function* () {
@@ -30,9 +31,12 @@ Node.prototype.gossip = function* gossip() {
 
 function* pushPullGossip(gossiper, gossipee) {
   var digest = yield gossiper.digest();
-  var result = yield gossipee.gossip(digest);
+  console.log('[%d] my digest is %j', this.id, digest);
+  var result = yield* gossipee.gossip(digest);
+  console.log('[%d] recieved', this.id, result);
   yield gossiper.merge(result.data);
   var delta = yield gossiper.delta(result.digest);
+  console.log('[%d] calculated delta is %j from digest', this.id, delta, result.digest);
   yield gossipee.sync(delta);
 }
 
@@ -40,6 +44,7 @@ Node.prototype.digest = function* digest() {
   var digest = {};
   for(var id in this.state.participants) {
     digest[id] = yield* this.state.max(id);
+    console.log(this.id, id, digest);
   }
   return digest;
 };
@@ -51,7 +56,6 @@ Node.prototype.delta = function* delta(digest) {
     for(var i in keys) {
       var key = keys[i];
       var item = this.state.participants[id][key];
-      console.log(id, key, item);
       if(item.version > digest[id]) {
         delta.push({
           id: id,
@@ -63,6 +67,17 @@ Node.prototype.delta = function* delta(digest) {
     }
   }
   return delta;
+};
+
+Node.prototype.merge = function* merge(delta) {
+  console.log('[%d] merge %j', this.id, delta);
+  for(var i in delta) {
+    var data = delta[i];
+    yield* this.state.set(data.key, {
+      version: data.version,
+      value: data.value
+    }, data.id)
+  }
 }
 
 module.exports = Node;

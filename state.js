@@ -26,6 +26,7 @@ State.prototype.get = function* get(key, id) {
 
 State.prototype.set = function* set(key, newItem, id) {
   id = id || this.id;
+  console.log('[%d] Set %d.%s to %j', this.id, id, key, newItem);
   var participant = this.participants[id];
   if(!participant) {
     this.participants[id] = {};
